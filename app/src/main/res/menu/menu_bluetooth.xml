@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/action_bluetooth_refresh"
+        android:title="@string/action_bluetooth_refresh_label"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_bluetooth_clear"
+        android:title="@string/action_bluetooth_clear_label" />
+</menu>

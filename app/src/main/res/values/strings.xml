@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Ayana</string>
+    <string name="bluetooth_activity_title">Bluetooth</string>
+    <string name="calibration_activity_title">Calibration</string>
+    <string name="snellen_activity_title">Snellen</string>
+    <string name="action_calibration_label">Calibration</string>
+    <string name="action_bluetooth_label">Bluetooth</string>
+    <string name="action_connect_label">Connect</string>
+    <string name="action_bluetooth_refresh_label">Refresh</string>
+    <string name="action_bluetooth_clear_label">Clear</string>
+    <string name="action_bluetooth_pair_label">Pair</string>
+</resources>

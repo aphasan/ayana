@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/action_connect"
+        android:title="@string/action_connect_label"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_calibration"
+        android:title="@string/action_calibration_label"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_bluetooth"
+        android:title="@string/action_bluetooth_label"
+        app:showAsAction="never" />
+</menu>
