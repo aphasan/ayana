@@ -1,10 +1,10 @@
 package net.medinacom.ayana.bluetooth;
 
-import android.bluetooth.BluetoothDevice;
 import android.view.View;
 import android.widget.TextView;
 
 import net.medinacom.ayana.R;
+import net.medinacom.ayana.device.DeviceManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,7 +17,7 @@ public class BluetoothDeviceHolder extends RecyclerView.ViewHolder {
         super(itemView);
     }
 
-    public void bindModel(BluetoothDevice device) {
+    public void bindModel(BluetoothDeviceWrapper device) {
         TextView deviceName = itemView.findViewById(R.id.txt_device_name);
         deviceName.setText(device.getName());
 
@@ -25,13 +25,15 @@ public class BluetoothDeviceHolder extends RecyclerView.ViewHolder {
         deviceHardwareAddress.setText(device.getAddress());
 
         TextView deviceClass = itemView.findViewById(R.id.txt_device_class);
-        deviceClass.setText(BluetoothClassTranslator.translate(device.getBluetoothClass().getDeviceClass()));
+        String bondingState = this.itemView.getResources()
+                .getString(DeviceManager.getInstance().isEngaged(device) ? R.string.device_bonded : R.string.device_unbonded);
+        deviceClass.setText(bondingState);
 
         itemView.setTag(device);
     }
 
-    public ItemDetailsLookup.ItemDetails<BluetoothDevice> getItemDetails() {
-        return new ItemDetailsLookup.ItemDetails<BluetoothDevice>() {
+    public ItemDetailsLookup.ItemDetails<BluetoothDeviceWrapper> getItemDetails() {
+        return new ItemDetailsLookup.ItemDetails<BluetoothDeviceWrapper>() {
             @Override
             public int getPosition() {
                 return getAdapterPosition();
@@ -39,8 +41,8 @@ public class BluetoothDeviceHolder extends RecyclerView.ViewHolder {
 
             @Nullable
             @Override
-            public BluetoothDevice getSelectionKey() {
-                return (BluetoothDevice) itemView.getTag();
+            public BluetoothDeviceWrapper getSelectionKey() {
+                return (BluetoothDeviceWrapper) itemView.getTag();
             }
         };
     }

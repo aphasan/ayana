@@ -1,27 +1,23 @@
 package net.medinacom.ayana;
 
 import android.Manifest;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
 import com.google.android.material.snackbar.Snackbar;
 
-import net.medinacom.ayana.bluetooth.BluetoothAdapterListener;
 import net.medinacom.ayana.bluetooth.BluetoothDeviceAdapter;
 import net.medinacom.ayana.bluetooth.BluetoothDeviceDetailsLookup;
-import net.medinacom.ayana.bluetooth.BluetoothDeviceFoundReceiver;
-import net.medinacom.ayana.bluetooth.NoBluetoothAdapterException;
+import net.medinacom.ayana.bluetooth.BluetoothDeviceWrapper;
 import net.medinacom.ayana.common.TagKeyProvider;
+import net.medinacom.ayana.device.DeviceManager;
+import net.medinacom.ayana.device.DeviceManagerListener;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
@@ -36,18 +32,17 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 public class BluetoothActivity extends AppCompatActivity
-        implements BluetoothAdapterListener, ActionMode.Callback {
+        implements DeviceManagerListener, ActionMode.Callback {
 
-    final int REQUEST_ENABLE_BLUETOOTH = 1;
-    final int MY_PERMISSION_REQUEST_ACCESS_COARSE_LOCATION = 2;
+    final int MY_PERMISSION_REQUEST_ACCESS_COARSE_LOCATION = 1;
 
-    BluetoothAdapter bluetoothAdapter;
     BluetoothDeviceAdapter bluetoothDeviceAdapter;
-    BluetoothDeviceFoundReceiver bluetoothDeviceFoundReceiver;
 
-    SelectionTracker<BluetoothDevice> tracker = null;
+    SelectionTracker<BluetoothDeviceWrapper> tracker = null;
 
     SwipeRefreshLayout swipeRefreshLayout;
+
+    DeviceManager deviceManager;
 
     Snackbar snackbar;
 
@@ -62,22 +57,27 @@ public class BluetoothActivity extends AppCompatActivity
         setSupportActionBar(toolbar);
 
         ActionBar actionBar = getSupportActionBar();
-
         actionBar.setDisplayHomeAsUpEnabled(true);
 
+        deviceManager = DeviceManager.getInstance();
+        deviceManager.putInContext(this);
+        deviceManager.listenAdapterEvents()
+                .listenDiscoveryEvents()
+                .listenBondStateEvents()
+                .init();
+        deviceManager.registerListener(this);
+
         RecyclerView listDevices = findViewById(R.id.list_bluetooth);
-
         listDevices.setLayoutManager(new LinearLayoutManager(this));
-
-        bluetoothDeviceAdapter = new BluetoothDeviceAdapter();
+        bluetoothDeviceAdapter = new BluetoothDeviceAdapter(deviceManager.getNeighbours());
         listDevices.setAdapter(bluetoothDeviceAdapter);
 
-        tracker = new SelectionTracker.Builder<BluetoothDevice>(
+        tracker = new SelectionTracker.Builder<BluetoothDeviceWrapper>(
                 "mySelection",
                 listDevices,
-                new TagKeyProvider<BluetoothDevice>(listDevices),
+                new TagKeyProvider<>(listDevices),
                 new BluetoothDeviceDetailsLookup(listDevices),
-                StorageStrategy.createParcelableStorage(BluetoothDevice.class)
+                StorageStrategy.createParcelableStorage(BluetoothDeviceWrapper.class)
         ).withSelectionPredicate(SelectionPredicates.createSelectSingleAnything())
                 .build();
 
@@ -88,35 +88,26 @@ public class BluetoothActivity extends AppCompatActivity
                     startSupportActionMode(BluetoothActivity.this);
                 } else if (actionMode != null && !tracker.hasSelection()) {
                     actionMode.finish();
+                } else if (actionMode != null && tracker.hasSelection()) {
+                    actionMode.invalidate();
                 }
             }
         });
 
         bluetoothDeviceAdapter.setTracker(tracker);
 
-        bluetoothDeviceFoundReceiver = new BluetoothDeviceFoundReceiver();
-        bluetoothDeviceFoundReceiver.addListener(this);
-
         swipeRefreshLayout = findViewById(R.id.swiperefresh_bluetooth);
         swipeRefreshLayout.setOnRefreshListener(this::startScan);
     }
 
     @Override
-    protected void onStart() {
-        super.onStart();
-        try {
-            setupBluetooth();
-        } catch (NoBluetoothAdapterException e) {
-            showInfo("Bluetooth adapter not found", "Error", null, 0);
-        }
+    protected void onStop() {
+        super.onStop();
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        unregisterReceiver(bluetoothDeviceFoundReceiver);
-        if (bluetoothAdapter.isDiscovering())
-            bluetoothAdapter.cancelDiscovery();
+    protected void onDestroy() {
+        super.onDestroy();
     }
 
     @Override
@@ -129,9 +120,7 @@ public class BluetoothActivity extends AppCompatActivity
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_bluetooth_refresh:
-                if (!bluetoothAdapter.isDiscovering()) {
-                    startScan();
-                }
+                deviceManager.startDiscovery();
                 return true;
             case R.id.action_bluetooth_clear:
                 bluetoothDeviceAdapter.clearDevice();
@@ -139,96 +128,6 @@ public class BluetoothActivity extends AppCompatActivity
             default:
                 return super.onOptionsItemSelected(item);
         }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        switch (requestCode) {
-            case REQUEST_ENABLE_BLUETOOTH:
-                if (resultCode == RESULT_OK) {
-                    showInfo("Bluetooth has been enabled", "Info", null, 0);
-                } else if (resultCode == RESULT_CANCELED) {
-                    showInfo("Bluetooth can't be enabled", "Error", null, 0);
-                }
-                break;
-            default:
-                break;
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        switch (requestCode) {
-            case MY_PERMISSION_REQUEST_ACCESS_COARSE_LOCATION:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                    startDeviceDiscovery();
-                break;
-        }
-    }
-
-    private void setupBluetooth() throws NoBluetoothAdapterException {
-
-        // Try to find Bluetooth adapter
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
-        // If it has been found
-        if (bluetoothAdapter != null) {
-            // But it is not enabled yet
-            if (!bluetoothAdapter.isEnabled()) {
-                // Request user to enable it
-                Intent enableBluetoothIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                startActivityForResult(enableBluetoothIntent, REQUEST_ENABLE_BLUETOOTH);
-            }
-        } else {
-            throw new NoBluetoothAdapterException();
-        }
-
-    }
-
-    private void startScan() {
-
-        int hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
-        if (hasPermission == PackageManager.PERMISSION_DENIED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, MY_PERMISSION_REQUEST_ACCESS_COARSE_LOCATION);
-        } else {
-            startDeviceDiscovery();
-        }
-    }
-
-    private void startDeviceDiscovery() {
-        if (bluetoothAdapter.isDiscovering()) return;
-
-        IntentFilter discoveryStartedFilter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
-        IntentFilter deviceFoundFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        IntentFilter discoveryFinishedFilter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-        registerReceiver(bluetoothDeviceFoundReceiver, discoveryStartedFilter);
-        registerReceiver(bluetoothDeviceFoundReceiver, deviceFoundFilter);
-        registerReceiver(bluetoothDeviceFoundReceiver, discoveryFinishedFilter);
-
-        bluetoothAdapter.startDiscovery();
-    }
-
-    public void showInfo(String msg, String actionTitle, View.OnClickListener action, int duration) {
-        snackbar = Snackbar.make(findViewById(R.id.coordinator_bluetooth), msg, duration == 0 ? Snackbar.LENGTH_SHORT : duration);
-        if (action != null)
-            snackbar.setAction(actionTitle, action);
-
-        snackbar.show();
-    }
-
-    @Override
-    public void onDiscoveryStarted() {
-        swipeRefreshLayout.setRefreshing(true);
-    }
-
-    @Override
-    public void onDeviceFound(BluetoothDevice bluetoothDevice) {
-        bluetoothDeviceAdapter.addDevice(bluetoothDevice);
-    }
-
-    @Override
-    public void onDiscoveryFinished() {
-        swipeRefreshLayout.setRefreshing(false);
     }
 
     @Override
@@ -240,21 +139,150 @@ public class BluetoothActivity extends AppCompatActivity
 
     @Override
     public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-        return false;
+        BluetoothDeviceWrapper device = tracker.getSelection().iterator().next();
+        boolean isPaired = deviceManager.isEngaged(device);
+        String actionLabel = getResources().getString(isPaired ? R.string.action_bluetooth_unpair_label : R.string.action_bluetooth_pair_label);
+        menu.findItem(R.id.action_bluetooth_pair).setTitle(actionLabel);
+        if (!isPaired) {
+            MenuItem itemChangeName = menu.findItem(R.id.action_change_name);
+            itemChangeName.setVisible(false);
+            MenuItem itemChangePassword = menu.findItem(R.id.action_change_password);
+            itemChangePassword.setVisible(false);
+        }
+        return true;
     }
 
     @Override
     public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+        BluetoothDeviceWrapper device = tracker.getSelection().iterator().next();
+        deviceManager.stopDiscovery();
         switch ((item.getItemId())) {
             case R.id.action_bluetooth_pair:
+                if (deviceManager.isEngaged(device)) {
+                    deviceManager.disengage();
+                } else {
+                    deviceManager.engage(device);
+                }
+                tracker.clearSelection();
+                return true;
+            case R.id.action_change_name:
+                ChangeNameDialog changeNameDialog = new ChangeNameDialog();
+                changeNameDialog.registerListener(this::onChangeName);
+                changeNameDialog.show(getSupportFragmentManager(), "Change Name");
+                return true;
+            case R.id.action_change_password:
+                ChangePasswordDialog changePasswordDialog = new ChangePasswordDialog();
+                changePasswordDialog.registerListener(this::onChangePassword);
+                changePasswordDialog.show(getSupportFragmentManager(), "Change Password");
                 return true;
             default:
                 return false;
         }
     }
 
+    private void onReceive(String what, String... params) {
+        Log.e(what, params[0]);
+        switch (what) {
+            case "AT+NAME":
+                snackbar.dismiss();
+                showInfo(getResources().getString(R.string.name_changed), null, null, 0);
+                break;
+            case "AT+PSWD":
+                snackbar.dismiss();
+                showInfo(getResources().getString(R.string.password_changed), null, null, 0);
+                break;
+            case "ERROR":
+                snackbar.dismiss();
+                showInfo(params[0], null, null, 0);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case MY_PERMISSION_REQUEST_ACCESS_COARSE_LOCATION:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                    startScan();
+                break;
+        }
+    }
+
+    private void startScan() {
+        int hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
+        if (hasPermission == PackageManager.PERMISSION_DENIED) {
+            swipeRefreshLayout.setRefreshing(false);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, MY_PERMISSION_REQUEST_ACCESS_COARSE_LOCATION);
+        } else {
+            deviceManager.startDiscovery();
+        }
+    }
+
+    public void showInfo(String msg, String actionTitle, View.OnClickListener action, int duration) {
+        snackbar = Snackbar.make(findViewById(R.id.coordinator_bluetooth), msg, duration == 0 ? Snackbar.LENGTH_SHORT : duration);
+        if (action != null)
+            snackbar.setAction(actionTitle, action);
+        snackbar.show();
+    }
+
+    @Override
+    public void onAdapterEnabled() {
+
+    }
+
+    @Override
+    public void onAdapterDisabled() {
+
+    }
+
+    @Override
+    public void onDiscoveryStarted() {
+        swipeRefreshLayout.setRefreshing(true);
+        showInfo(getResources().getString(R.string.device_discovering_started),
+                getResources().getString(R.string.device_stop_discovering),
+                view -> deviceManager.stopDiscovery(),
+                Snackbar.LENGTH_INDEFINITE);
+    }
+
+    @Override
+    public void onDiscoveryFound() {
+        bluetoothDeviceAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onDiscoveryFinished() {
+        swipeRefreshLayout.setRefreshing(false);
+        if (snackbar != null && snackbar.isShown()) snackbar.dismiss();
+    }
+
     @Override
     public void onDestroyActionMode(ActionMode mode) {
         actionMode = null;
+    }
+
+    @Override
+    public void onBonding() {
+        showInfo(getResources().getString(R.string.device_bonding), null, null, Snackbar.LENGTH_INDEFINITE);
+    }
+
+    @Override
+    public void onBonded() {
+        bluetoothDeviceAdapter.notifyDataSetChanged();
+        if (snackbar != null && snackbar.isShown())
+            snackbar.dismiss();
+    }
+
+    @Override
+    public void onBondingFailed() {
+        bluetoothDeviceAdapter.notifyDataSetChanged();
+    }
+
+    private void onChangeName(String newName) {
+        showInfo(getResources().getString(R.string.changing_name), null, null, 0);
+        deviceManager.changeName(newName);
+    }
+
+    private void onChangePassword(String newPswd) {
+        showInfo(getResources().getString(R.string.changing_password), null, null, 0);
+        deviceManager.changePassword(newPswd);
     }
 }

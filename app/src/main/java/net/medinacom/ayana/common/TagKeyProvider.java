@@ -39,7 +39,7 @@ public class TagKeyProvider<Tag extends Parcelable> extends ItemKeyProvider<Tag>
         RecyclerView.ViewHolder holder = recyclerView.findContainingViewHolder(view);
         int position = holder.getAdapterPosition();
         Tag tag = (Tag) view.getTag();
-        if(position != -1 && !tag.equals(null)) {
+        if(position != -1 && tag != null) {
             positionToTag.put(position, tag);
             tagToPosition.put(tag, position);
         }

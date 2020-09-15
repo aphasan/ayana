@@ -6,4 +6,12 @@
         android:id="@+id/action_bluetooth_pair"
         android:title="@string/action_bluetooth_pair_label"
         app:showAsAction="always" />
+    <item
+        android:id="@+id/action_change_name"
+        android:title="@string/action_change_name_label"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_change_password"
+        android:title="@string/action_change_password_label"
+        app:showAsAction="never" />
 </menu>

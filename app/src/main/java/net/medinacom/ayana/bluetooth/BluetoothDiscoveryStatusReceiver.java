@@ -5,11 +5,10 @@ import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 
-public class BluetoothDeviceFoundReceiver extends BroadcastReceiver {
+public class BluetoothDiscoveryStatusReceiver extends BroadcastReceiver {
 
-    private BluetoothAdapterListener listener;
+    private BluetoothDiscoveryStatusListener listener;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -29,7 +28,7 @@ public class BluetoothDeviceFoundReceiver extends BroadcastReceiver {
         }
     }
 
-    public void addListener(BluetoothAdapterListener listener) {
+    public void addListener(BluetoothDiscoveryStatusListener listener) {
         this.listener = listener;
     }
 

@@ -1,6 +1,5 @@
 package net.medinacom.ayana.bluetooth;
 
-import android.bluetooth.BluetoothDevice;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -9,7 +8,7 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.selection.ItemDetailsLookup;
 import androidx.recyclerview.widget.RecyclerView;
 
-public class BluetoothDeviceDetailsLookup extends ItemDetailsLookup<BluetoothDevice> {
+public class BluetoothDeviceDetailsLookup extends ItemDetailsLookup<BluetoothDeviceWrapper> {
 
     private RecyclerView recyclerView;
 
@@ -20,7 +19,7 @@ public class BluetoothDeviceDetailsLookup extends ItemDetailsLookup<BluetoothDev
 
     @Nullable
     @Override
-    public ItemDetails<BluetoothDevice> getItemDetails(@NonNull MotionEvent e) {
+    public ItemDetails<BluetoothDeviceWrapper> getItemDetails(@NonNull MotionEvent e) {
         View view = recyclerView.findChildViewUnder(e.getX(), e.getY());
         if(view != null) {
             return ((BluetoothDeviceHolder) recyclerView.getChildViewHolder(view)).getItemDetails();

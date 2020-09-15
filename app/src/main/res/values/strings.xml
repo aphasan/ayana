@@ -1,12 +1,62 @@
 <resources>
-    <string name="app_name">Ayana</string>
-    <string name="bluetooth_activity_title">Bluetooth</string>
+    <string name="app_name">OptoTip</string>
+    <string name="bluetooth_activity_title">Device</string>
     <string name="calibration_activity_title">Calibration</string>
-    <string name="snellen_activity_title">Snellen</string>
-    <string name="action_calibration_label">Calibration</string>
+    <string name="snellen_activity_title">OptoTip</string>
     <string name="action_bluetooth_label">Bluetooth</string>
     <string name="action_connect_label">Connect</string>
     <string name="action_bluetooth_refresh_label">Refresh</string>
     <string name="action_bluetooth_clear_label">Clear</string>
-    <string name="action_bluetooth_pair_label">Pair</string>
+    <string name="action_bluetooth_pair_label">Engage</string>
+    <string name="action_bluetooth_unpair_label">Disengage</string>
+    <string name="action_calibration_label">Calibration</string>
+    <string name="device_discovering_started">Still discovering</string>
+    <string name="device_stop_discovering">Stop</string>
+    <string name="device_bonding">Engaging..</string>
+    <string name="device_bonded">Engaged</string>
+    <string name="device_unbonded">Disengaged</string>
+
+    <string name="pointer_label">Pointer</string>
+    <string name="action_shift_left_label"><![CDATA[<<]]></string>
+    <string name="action_shift_right_label"><![CDATA[>>]]></string>
+    <string name="button6_desc">Button 6</string>
+    <string name="button5_desc">Button 5</string>
+    <string name="button7_desc">Button 7</string>
+    <string name="button4_desc">Button 4</string>
+    <string name="button8_desc">Button 8</string>
+    <string name="button3_desc">Button 3</string>
+    <string name="button9_desc">Button 9</string>
+    <string name="button10_desc">Button 10</string>
+    <string name="button2_desc">Button 2</string>
+    <string name="button1_desc">Button 1</string>
+    <string name="button11_desc">Button 11</string>
+    <string name="connecting_label">Connecting...</string>
+    <string name="connecting_failed_label">Connecting...</string>
+    <string name="connected_label">Connected!</string>
+    <string name="disconnecting_label">Disconnecting...</string>
+    <string name="disconnected_label">Disconnected!</string>
+    <string name="connection_error">Connection error!</string>
+    <string name="connection_problem_label">Connection problem!</string>
+    <string name="action_calibration_dec">-</string>
+    <string name="action_calibration_inc">+</string>
+    <string name="action_calibration_save">Save</string>
+    <string name="calibration_saved_label">Calibration saved!</string>
+    <string name="mapping_saved_info">Switch mapping success!</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="label_switch_num_input">Lamp Number</string>
+    <string name="dialog_switch_mapping_title">Lamp Map</string>
+    <string name="dialog_switch_mapping_save">Save</string>
+    <string name="dialog_switch_mapping_cancel">Cancel</string>
+    <string name="dialog_change_name_name_label">Name</string>
+    <string name="dialog_change_password_password_label">Password</string>
+    <string name="action_change_name_label">Change Name</string>
+    <string name="action_change_password_label">Change Password</string>
+    <string name="changing_name">Restart Snellen Board after blinking</string>
+    <string name="changing_password">Restart Snellen Board after blinking</string>
+    <string name="name_changed">Name changed!</string>
+    <string name="password_changed">Password changed!</string>
+    <string name="io_error">Device error!</string>
+    <string name="no_connecting_device">No connecting device!</string>
 </resources>
